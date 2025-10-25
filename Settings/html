@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scam Blocker — Options</title>
+  <style>
+    body{font-family:Arial,Helvetica,sans-serif;padding:18px;}
+    h1{margin-top:0}
+    textarea{width:100%;height:150px;padding:8px;font-family:monospace}
+    .row{display:flex;gap:8px;margin-top:8px}
+    button{padding:10px;border-radius:6px;border:none;cursor:pointer}
+    .hint{color:#555;font-size:13px;margin-top:8px}
+    label{font-weight:600}
+  </style>
+</head>
+<body>
+  <h1>Scam Blocker — Options</h1>
+  <p class="hint">Each line is a pattern. Patterns may be full hostnames (example.com), domain suffixes (.badsite.com or *.badsite.com), or any substring to match the URL.</p>
+  <label for="blocklist">Blocked patterns (one per line):</label>
+  <textarea id="blocklist" placeholder="example-bad-site.com\nphishing\n.bad-domain.com"></textarea>
+  <div class="row">
+    <button id="save">Save</button>
+    <button id="reset">Reset to defaults</button>
+    <button id="export">Export (copy)</button>
+    <button id="import">Import (paste)</button>
+  </div>
+  <p class="hint">You can add reputable blocklists by copying patterns into this box. The extension checks patterns locally; it does not automatically fetch remote lists.</p>
+
+  <script>
+    async function load() {
+      const data = await chrome.storage.local.get(['blocklist']);
+      const list = Array.isArray(data.blocklist) ? data.blocklist : [];
+      document.getElementById('blocklist').value = list.join("\n");
+    }
+    async function save() {
+      const raw = document.getElementById('blocklist').value;
+      const arr = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      await chrome.storage.local.set({ blocklist: arr });
+      alert('Saved ' + arr.length + ' pattern(s).');
+    }
+    async function resetDefaults() {
+      if (!confirm('Reset blocklist to default example patterns?')) return;
+      const defaults = ["example-bad-site.com", "malicious-example", "phishing-site"];
+      await chrome.storage.local.set({ blocklist: defaults });
+      await load();
+      alert('Reset to defaults.');
+    }
+    async function exportList() {
+      const raw = document.getElementById('blocklist').value;
+      await navigator.clipboard.writeText(raw);
+      alert('Blocklist copied to clipboard.');
+    }
+    async function importList() {
+      const txt = prompt('Paste blocklist (one pattern per line):');
+      if (!txt) return;
+      document.getElementById('blocklist').value = txt;
+      await save();
+    }
+
+    document.getElementById('save').addEventListener('click', save);
+    document.getElementById('reset').addEventListener('click', resetDefaults);
+    document.getElementById('export').addEventListener('click', exportList);
+    document.getElementById('import').addEventListener('click', importList);
+
+    load();
+  </script>
+</body>
+</html>
